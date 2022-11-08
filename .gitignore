@@ -8,5 +8,8 @@
 *.png
 *.gif
 
+# ignore transcription files
+*.txt
+
 # ignore __pycache__ directories
 __pycache__/

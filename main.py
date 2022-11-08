@@ -1,5 +1,5 @@
 import subprocess
-from transcriptor import Transcriptor
+from utils.transcriptor import Transcriptor
 
 def get_config():
     import json

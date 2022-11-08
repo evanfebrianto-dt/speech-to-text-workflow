@@ -2,6 +2,7 @@
 import os
 import subprocess
 import math
+from utils.util import timeit
 
 class Transcriptor:
     def __init__(self):
@@ -18,6 +19,7 @@ class Transcriptor:
         self.response = None
 
     # Convert the video file to audio file
+    @timeit
     def convert_video_uri_to_audio(self, video_uri):
         # Get the audio file name
         self.local_file["audio_file"] = video_uri.split('/')[-1].split('.')[0] + '.flac'
@@ -54,6 +56,7 @@ class Transcriptor:
 
 
     # Upload the audio file to google cloud storage
+    @timeit
     def upload_audio_to_gcs(self, audio_file):
         # Get the bucket name
         bucket_name = self.config['bucket_audios']
@@ -74,37 +77,48 @@ class Transcriptor:
 
 
     # Transcribe the audio file
-    def transcribe_gcs(self, timeout_buffer=30):
-        """Asynchronously transcribes the audio file specified by the gcs_uri."""
-        from google.cloud import speech
+    @timeit
+    def transcribe_gcs(self, timeout_buffer=10):
+        # Get the transcription file name
+        self.local_file["transcription_file"] = self.gcs_uri.split('/')[-1].split('.')[0] + '.txt'
 
-        client = speech.SpeechClient()
+        # Check if the transcription file already exists locally
+        if os.path.exists(self.local_file["transcription_file"]):
+            print(f'[INFO] Skipping transcription because {self.local_file["transcription_file"]} already exists locally')
+        else:
+            """Asynchronously transcribes the audio file specified by the gcs_uri."""
+            from google.cloud import speech
 
-        audio = speech.RecognitionAudio(uri=self.gcs_uri)
-        config = speech.RecognitionConfig(
-            encoding=speech.RecognitionConfig.AudioEncoding.FLAC,
-            sample_rate_hertz=16000,
-            language_code="en-US",
-        )
+            client = speech.SpeechClient()
 
-        operation = client.long_running_recognize(config=config, audio=audio)
+            audio = speech.RecognitionAudio(uri=self.gcs_uri)
+            config = speech.RecognitionConfig(
+                encoding=speech.RecognitionConfig.AudioEncoding.FLAC,
+                sample_rate_hertz=16000,
+                language_code="en-US",
+            )
 
-        print(f'[INFO] Timeout buffer: {timeout_buffer}')
-        self.response = operation.result(timeout=math.ceil(self.audio_length) + timeout_buffer)
-        print(f'[INFO] Transcription completed')
+            operation = client.long_running_recognize(config=config, audio=audio)
+
+            print(f'[INFO] Starting transcription for {self.gcs_uri}')
+            self.response = operation.result(timeout=math.ceil(self.audio_length) + timeout_buffer)
+            print(f'[INFO] Transcription completed')
 
 
     # Get the transcription
     def get_transcription(self):
         # Each result is for a consecutive portion of the audio. Iterate through
         # them to get the transcripts for the entire audio file.
-        for result in self.response.results:
-            # The first alternative is the most likely one for this portion.
-            print(u"Transcript: {}".format(result.alternatives[0].transcript))
-            print("Confidence: {}".format(result.alternatives[0].confidence))
-
+        if self.response:
+            for result in self.response.results:
+                # The first alternative is the most likely one for this portion.
+                print(u"Transcript: {}".format(result.alternatives[0].transcript))
+                print("Confidence: {}".format(result.alternatives[0].confidence))
+        else:
+            print('[INFO] No transcription available')
 
     # Get the transcription and save it to a file
+    @timeit
     def write_transcription_to_file(self):
         # Get the transcription file name
         self.local_file["transcription_file"] = self.gcs_uri.split('/')[-1].split('.')[0] + '.txt'
@@ -117,27 +131,41 @@ class Transcriptor:
             transcription = ''
             for result in self.response.results:
                 # The first alternative is the most likely one for this portion.
-                transcription += result
+                transcription += result.alternatives[0].transcript + '\n'
+
+            # Write the transcription to a file
+            with open(self.local_file["transcription_file"], 'w') as f:
+                f.write(transcription)
+                print(f'[INFO] {self.local_file["transcription_file"]} created locally')
     
     
     # Upload transcription result from self.response.result to google cloud storage
+    @timeit
     def upload_transcription_to_gcs(self):
         # Get the bucket name
-        bucket_name = self.config['bucket_transcrips']
+        bucket_name = self.config['bucket_transcripts']
 
         # Get the transcription file name
         transcription_file = self.gcs_uri.split('/')[-1].split('.')[0] + '.txt'
 
         # Check if the transcription file already exists in the bucket
         command = f'gsutil ls "{bucket_name}/{transcription_file}"'
-        result = subprocess.check_output(command, shell=True)
+
+        # If it does not exist, gsutil will return CommandException: One or more URLs matched no objects.
+        try:
+            result = subprocess.check_output(command, shell=True)
+        except subprocess.CalledProcessError as e:
+            result = e.output
+
         if result.decode('utf-8') == '':
             # Upload the transcription file to the bucket
-            command = f'gsutil cp "{transcription_file}" "{bucket_name}"'
+            command = f'gsutil cp "{self.local_file["transcription_file"]}" "{bucket_name}"'
             subprocess.call(command, shell=True)
+            print(f'[INFO] {self.local_file["transcription_file"]} uploaded to {bucket_name}')
 
 
     # Delete the local files
+    @timeit
     def delete_local_files(self):
         for file in self.local_file.values():
             if os.path.exists(file):
