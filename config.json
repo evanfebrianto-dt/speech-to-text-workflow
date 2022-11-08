@@ -1,0 +1,5 @@
+{
+    "bucket_videos": "gs://my-custom-dataset/speech2text/videos",
+    "bucket_audios": "gs://my-custom-dataset/speech2text/audios",
+    "bucket_transcripts": "gs://my-custom-dataset/speech2text/transcripts"
+}

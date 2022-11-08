@@ -1,0 +1,12 @@
+# ignore any video, audio, or image files
+*.mp4
+*.avi
+*.mp3
+*.flac
+*.wav
+*.jpg
+*.png
+*.gif
+
+# ignore __pycache__ directories
+__pycache__/
