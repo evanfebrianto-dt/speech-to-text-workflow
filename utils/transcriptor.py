@@ -63,7 +63,11 @@ class Transcriptor:
 
         # Check if the audio file already exists in the bucket
         command = f'gsutil ls "{bucket_name}/{audio_file}"'
-        result = subprocess.check_output(command, shell=True)
+        try:
+            result = subprocess.check_output(command, shell=True)
+        except subprocess.CalledProcessError as e:
+            result = e.output
+            
         if result.decode('utf-8') == '':
             # Upload the audio file to the bucket
             command = f'gsutil cp "{audio_file}" "{bucket_name}"'

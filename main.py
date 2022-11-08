@@ -33,6 +33,7 @@ def main():
         transcriptor.transcribe_gcs()
         transcriptor.write_transcription_to_file()
         transcriptor.upload_transcription_to_gcs()
+        transcriptor.delete_local_files()
 
 
 if __name__ == '__main__':
