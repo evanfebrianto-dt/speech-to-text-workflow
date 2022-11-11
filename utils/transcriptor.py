@@ -41,7 +41,7 @@ class Transcriptor:
         else:
             print(f'[INFO] Converting {self.local_file["video_file"]} to {self.local_file["audio_file"]}')
             # Convert the video file to audio file
-            command = f'ffmpeg -i "{self.local_file["video_file"]}" -ac 1 -ar 16000 "{self.local_file["audio_file"]}"'
+            command = f'ffmpeg -filter_threads 8 -i "{self.local_file["video_file"]}" -ac 1 -ar 16000 "{self.local_file["audio_file"]}"'
             subprocess.call(command, shell=True)
             print(f'[INFO] audio file {self.local_file["audio_file"]} created')
 
