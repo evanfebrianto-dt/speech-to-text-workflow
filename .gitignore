@@ -10,6 +10,10 @@
 
 # ignore transcription files
 *.txt
+!requirements.txt
+
+# ignore code workspaces
+*.code-workspace
 
 # ignore __pycache__ directories
 __pycache__/
