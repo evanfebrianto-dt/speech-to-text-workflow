@@ -99,7 +99,7 @@ class Transcriptor:
             config = speech.RecognitionConfig(
                 encoding=speech.RecognitionConfig.AudioEncoding.FLAC,
                 sample_rate_hertz=16000,
-                language_code="en-US",
+                language_code=self.config["language-code"], # see the doc support: https://cloud.google.com/speech-to-text/docs/languages
             )
 
             operation = client.long_running_recognize(config=config, audio=audio)
