@@ -98,7 +98,7 @@ class Transcriptor:
             audio = speech.RecognitionAudio(uri=self.gcs_uri)
             use_enhanced, model = False, "default"
             if self.config["language-code"] == "th-TH":
-                use_enhanced, model = True, "latest_long"
+                use_enhanced, model = True, "latest_short"
             config = speech.RecognitionConfig(
                 encoding=speech.RecognitionConfig.AudioEncoding.FLAC,
                 sample_rate_hertz=16000,
@@ -112,7 +112,6 @@ class Transcriptor:
 
             print(f'[INFO] Starting transcription for {self.gcs_uri}')
             self.response = operation.result() #timeout=math.ceil(self.audio_length) + timeout_buffer
-            print(f'[INFO] Transcription completed')
 
     @timeit
     def transcribe_local_audio(self):
@@ -129,16 +128,17 @@ class Transcriptor:
         
         use_enhanced, model = False, "default"
         if self.config["language-code"] == "th-TH":
-            use_enhanced, model = True, "latest_long"
+            use_enhanced, model = True, "latest_short"
         config = speech.RecognitionConfig(
-            encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+            encoding=speech.RecognitionConfig.AudioEncoding.FLAC,
             sample_rate_hertz=16000,
             language_code=self.config["language-code"],
             model=model,
         )
 
-        response = client.recognize(config=config, audio=audio)
-
+        response = client.long_running_recognize(config=config, audio=audio)
+    
+        print(f'[INFO] Starting transcription for {self.local_file["audio_file"]}')
         self.response = response.result() #timeout=math.ceil(self.audio_length) + timeout_buffer
 
 

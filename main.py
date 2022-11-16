@@ -49,12 +49,12 @@ def main():
             continue
         # Convert the video file to audio file
         transcriptor.convert_video_uri_to_audio(video)
+
         # Transcribe the audio file
-        # transcriptor.transcribe_gcs()
-        transcriptor.transcribe_local_audio()
+        transcriptor.transcribe_gcs()
         transcriptor.write_transcription_to_file()
         transcriptor.upload_transcription_to_gcs()
-        # transcriptor.delete_local_files()
+        transcriptor.delete_local_files()
 
 
 if __name__ == '__main__':
