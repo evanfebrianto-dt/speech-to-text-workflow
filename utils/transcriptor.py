@@ -41,7 +41,7 @@ class Transcriptor:
         else:
             print(f'[INFO] Converting {self.local_file["video_file"]} to {self.local_file["audio_file"]}')
             # Convert the video file to audio file
-            command = f'ffmpeg -filter_threads 8 -i "{self.local_file["video_file"]}" -ac 1 -ar 16000 "{self.local_file["audio_file"]}"'
+            command = f'ffmpeg -filter_threads 16 -i "{self.local_file["video_file"]}" -ac 1 -ar 16000 "{self.local_file["audio_file"]}"'
             subprocess.call(command, shell=True)
             print(f'[INFO] audio file {self.local_file["audio_file"]} created')
 
@@ -96,16 +96,15 @@ class Transcriptor:
             client = speech.SpeechClient()
 
             audio = speech.RecognitionAudio(uri=self.gcs_uri)
-            use_enhanced, model = False, "default"
-            if self.config["language-code"] == "th-TH":
-                use_enhanced, model = True, "latest_short"
+
             config = speech.RecognitionConfig(
                 encoding=speech.RecognitionConfig.AudioEncoding.FLAC,
                 sample_rate_hertz=16000,
                 language_code=self.config["language-code"], # see the doc support: https://cloud.google.com/speech-to-text/docs/languages
-                use_enhanced=use_enhanced,
+                alternative_language_codes=["en-US"],
+                use_enhanced=True,
                 # A model must be specified to use enhanced model.
-                model=model
+                model="latest_short"
             )
 
             operation = client.long_running_recognize(config=config, audio=audio)
@@ -133,6 +132,7 @@ class Transcriptor:
             encoding=speech.RecognitionConfig.AudioEncoding.FLAC,
             sample_rate_hertz=16000,
             language_code=self.config["language-code"],
+            alternative_language_codes=["en-US"],
             model=model,
         )
 
@@ -164,15 +164,17 @@ class Transcriptor:
         if os.path.exists(self.local_file["transcription_file"]):
             print(f'[INFO] {self.local_file["transcription_file"]} already exists locally')
         else:
-            # Get the transcription
-            transcription = ''
-            for result in self.response.results:
-                # The first alternative is the most likely one for this portion.
-                transcription += result.alternatives[0].transcript + '\n'
-
             # Write the transcription to a file
-            with open(self.local_file["transcription_file"], 'w') as f:
-                f.write(transcription)
+            with open(self.local_file["transcription_file"], 'w', encoding="UTF-8") as f:
+                # f.write(transcription)
+                for result in self.response.results:
+                    # The first alternative is the most likely one for this portion.
+                    f.write("Confidence: {}".format(result.alternatives[0].confidence))
+                    f.write('\n')
+                    f.write(u"Transcript: {}".format(result.alternatives[0].transcript))
+                    # Write line break
+                    f.write('\n\n')
+        
                 print(f'[INFO] {self.local_file["transcription_file"]} created locally')
     
     
